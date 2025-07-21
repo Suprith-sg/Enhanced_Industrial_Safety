@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PPE Detection System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        #canvas {
+            max-width: 100%;
+            border: 2px solid #333;
+            background-color: black;
+        }
+        #alarm-message {
+            display: none;
+            color: red;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        #loading {
+            display: none;
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+    <h1>Live PPE Detection</h1>
+    
+    <canvas id="canvas" width="640" height="480"></canvas>
+
+    <div id="loading"></div>
+    <div id="alarm-message">PPE VIOLATION DETECTED!</div>
+
+    <div class="button-container">
+        <button id="fullscreen-btn">Toggle Fullscreen</button>
+        <button id="end-session-btn" onclick="window.location.href='/';">End Session</button>
+    </div>
+
+    <audio id="alarm-sound" loop>
+        <source src="/static/alarm.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingIndicator = document.getElementById('loading');
+        const alarmMessage = document.getElementById('alarm-message');
+        const alarmSound = document.getElementById('alarm-sound');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const endSessionBtn = document.getElementById('end-session-btn');
+
+        // Request camera access
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                video.addEventListener('play', () => {
+                    function processFrame() {
+                        loadingIndicator.style.display = 'block';
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        const imageData = canvas.toDataURL('image/jpeg');
+                        
+                        fetch('/process_frame', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ image: imageData })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            loadingIndicator.style.display = 'none';
+                            
+                            // Draw processed image
+                            const processedImage = new Image();
+                            processedImage.onload = () => {
+                                ctx.drawImage(processedImage, 0, 0, canvas.width, canvas.height);
+                            };
+                            processedImage.src = data.image;
+
+                            // Handle alarm
+                            if (data.alert) {
+                                alarmMessage.style.display = 'block';
+                                alarmSound.play().catch(e => console.log("Error playing sound:", e));
+                            } else {
+                                alarmMessage.style.display = 'none';
+                                alarmSound.pause();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            loadingIndicator.style.display = 'none';
+                        });
+
+                        // Continue processing frames
+                        setTimeout(processFrame, 500);
+                    }
+
+                    // Start processing frames
+                    processFrame();
+                });
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+            }
+        }
+
+        // Event listeners
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        endSessionBtn.addEventListener('click', () => {
+            // Stop all media tracks
+            const tracks = document.querySelector('video').srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Hide alarm message
+            alarmMessage.style.display = 'none';
+            alarmSound.pause();
+        });
+
+        // Start camera when page loads
+        startCamera();
+    </script>
+</body>
+</html>

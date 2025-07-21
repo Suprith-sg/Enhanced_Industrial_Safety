@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="E:\project\TESTINGGGG\test-final\templates\Gemini_Generated_Image_ri9u10ri9u10ri9u.jpg" rel="icon">
+    <link rel="stylesheet" href="test 1.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPE Detection</title>
+    
+
+</head>
+<style>
+    /* General Styling */
+    body {
+        background-image: url("./Gemini_Generated_Image_ri9u10ri9u10ri9u.jpg");
+        margin: 0;
+        padding: 0;
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        background-color: rgb(255, 255, 255);
+        background-position: center;
+        background-attachment: fixed;
+        background-size: cover;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+        background-size:auto;
+    }
+
+    .gradient-text {
+        font-size: 4vw;  /* Use vw for responsive font size */
+        font-weight: bold;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: black;
+    }
+
+    .on-hover {
+        font-size: 2rem;
+        color: white;
+        border: none;
+        background-color: rgb(0, 170, 255);
+        cursor: pointer;
+        padding: 15px 30px;
+        transition: background-color 0.3s ease, transform 0.3s ease;
+        border-radius: 8px;
+    }
+
+    .on-hover:hover {
+        background-color: rgb(17, 105, 206);
+        transform: scale(1.1);
+    }
+
+    /* Centering the content */
+    div {
+        
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.353);
+        text-align: center;
+        padding: 20px;
+        width: 80vw; /* Responsive width */
+        max-width: 900px; /* Max width to avoid large screens */
+        height: auto;
+        font-size: 3vw; /* Responsive font size */
+        font-weight: bolder;
+    }
+
+    /* Button styling */
+    .video {
+        width: 100%;
+        margin: auto;
+        text-align: center;
+        align-content: center;
+    }
+
+    /* Responsive Media Queries */
+    @media screen and (max-width: 768px) {
+        div {
+            font-size: 4vw; /* Adjust font size for smaller screens */
+            width: 90vw; /* Make the container more responsive on small screens */
+            height: auto;
+        }
+
+        .gradient-text {
+            font-size: 5vw; /* Adjust the gradient text size for smaller screens */
+        }
+
+        .on-hover {
+            font-size: 1.5rem; /* Adjust the button size */
+        }
+    }
+</style>
+<body>
+    <div>
+        <span class="gradient-text">PPE Detection</span><br><br>
+        <button onclick="window.location.href='/index';" class="on-hover">Get started ></button>
+    </div>
+</body>
+</html>

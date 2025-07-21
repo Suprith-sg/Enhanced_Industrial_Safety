@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv8 PPE Detection</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 20px;
+            font-size: 2.5rem;
+            color: #00aaff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            transition: opacity 0.3s ease;
+        }
+
+        .on-hover {
+            font-size: 1.5rem;
+            color: #fff;
+            background-color: #00aaff;
+            border: none;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            box-shadow: 0px 4px 15px rgba(0, 170, 255, 0.5);
+        }
+
+        .on-hover:hover {
+            background-color: #007acc;
+            transform: translateY(-3px);
+            box-shadow: 0px 6px 20px rgba(0, 122, 204, 0.7);
+        }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 3px solid #00aaff;
+            border-radius: 12px;
+            max-width: 90%;
+            height: auto;
+            box-shadow: 0px 4px 15px rgba(0, 170, 255, 0.3);
+        }
+
+        #loading {
+            display: none;
+            font-size: 1.25rem;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0px 4px 15px rgba(255, 255, 255, 0.2);
+            animation: fadeIn 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0.5;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        footer {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .fullscreen-mode .button-container {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Live PPE Detection</h1>
+        <canvas id="canvas"></canvas>
+        <div id="loading">Processing...</div>
+        <div class="button-container">
+            <button class="on-hover" onclick="toggleFullScreen();">Toggle Fullscreen</button>
+            <button class="on-hover" onclick="endSession();">End Session</button>
+        </div>
+    </div>
+
+    <footer>
+        © 2024 YOLOv8 Detection System. All rights reserved.
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const loading = document.getElementById('loading');
+        const container = document.querySelector('.container');
+        let stream = null;
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                if (canvas.requestFullscreen) {
+                    canvas.requestFullscreen();
+                } else if (canvas.mozRequestFullScreen) {
+                    canvas.mozRequestFullScreen();
+                } else if (canvas.webkitRequestFullscreen) {
+                    canvas.webkitRequestFullscreen();
+                } else if (canvas.msRequestFullscreen) {
+                    canvas.msRequestFullscreen();
+                }
+                container.classList.add('fullscreen-mode');
+            } else {
+                exitFullScreen();
+            }
+        }
+
+        function exitFullScreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            container.classList.remove('fullscreen-mode');
+        }
+
+        // Listen for fullscreen change events
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        function handleFullscreenChange() {
+            if (!document.fullscreenElement) {
+                container.classList.remove('fullscreen-mode');
+            }
+        }
+
+        // Add event listener for Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && document.fullscreenElement) {
+                exitFullScreen();
+            }
+        });
+
+        navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } })
+            .then((mediaStream) => {
+                stream = mediaStream;
+                const video = document.createElement('video');
+                video.srcObject = mediaStream;
+                video.play();
+
+                video.addEventListener('loadedmetadata', () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    startDetection(video);
+                });
+            })
+            .catch((err) => {
+                console.error("Error accessing webcam:", err);
+                alert("Unable to access webcam. Please allow camera permissions.");
+            });
+
+        function startDetection(video) {
+            function captureFrame() {
+                const tempCanvas = document.createElement('canvas');
+                const tempContext = tempCanvas.getContext('2d');
+
+                tempCanvas.width = 1920;
+                tempCanvas.height = 1080;
+                tempContext.drawImage(video, 0, 0, 1920, 1080);
+                const resizedFrame = tempCanvas.toDataURL('image/jpeg');
+
+                loading.style.display = 'block';
+
+                fetch('/process_frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: resizedFrame }),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        loading.style.display = 'none';
+                        if (data.image) {
+                            const annotatedImg = new Image();
+                            annotatedImg.src = data.image;
+
+                            annotatedImg.onload = () => {
+                                context.clearRect(0, 0, canvas.width, canvas.height);
+                                context.drawImage(annotatedImg, 0, 0, canvas.width, canvas.height);
+                            };
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error processing frame:", error);
+                        loading.style.display = 'none';
+                    });
+
+                requestAnimationFrame(captureFrame);
+            }
+
+            captureFrame();
+        }
+
+        function endSession() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            alert("Session ended. Detection stopped.");
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
